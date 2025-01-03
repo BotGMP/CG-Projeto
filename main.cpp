@@ -576,7 +576,8 @@ int main(void)
                     continue;
                 }
             }
-
+			
+			if(enemies[i].isAlive){
             // Calcular a oscilação para o movimento dinâmico
             float oscillation = oscillationAmplitude * sin(time * oscillationSpeed);
             glm::vec3 dynamicPosition = enemies[i].position;
@@ -588,6 +589,8 @@ int main(void)
                                    glm::scale(glm::mat4(1.0f), glm::vec3(enemyScale, enemyScale, enemyScale));
 
             drawModel(enemyVertexBuffer, enemyNormalBuffer, enemyColorBuffer, enemyShipUVBuffer, enemyShipTexture, enemyVertices.size() / 3, enemyModel);
+		}
+            
         }
 
         /////////////////////////////////////////////////////
