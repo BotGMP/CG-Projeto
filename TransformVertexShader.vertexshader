@@ -1,24 +1,20 @@
 #version 330 core
 
-layout(location = 0) in vec3 vertexPosition_modelspace;
-layout(location = 1) in vec3 vertexColor;
-layout(location = 2) in vec3 vertexNormal_modelspace;
+layout(location = 0) in vec3 vertexPosition;
+layout(location = 1) in vec2 vertexUV;      // Changed from vec3 vertexColor
+layout(location = 2) in vec3 vertexNormal;
 
-out vec3 fragmentColor;
+out vec2 UV;
 out vec3 fragPosition_cameraSpace;
 out vec3 fragNormal_cameraSpace;
 
 uniform mat4 MVP;
-uniform mat4 ModelViewMatrix; // ModelView matrix
-uniform mat3 NormalMatrix;    // For transforming normals
+uniform mat4 ModelViewMatrix;
+uniform mat3 NormalMatrix;
 
 void main() {
-    gl_Position = MVP * vec4(vertexPosition_modelspace, 1);
-
-    fragmentColor = vertexColor;
-
-    fragPosition_cameraSpace = vec3(ModelViewMatrix * vec4(vertexPosition_modelspace, 1));
-
-    fragNormal_cameraSpace = normalize(NormalMatrix * vertexNormal_modelspace);
+    gl_Position = MVP * vec4(vertexPosition, 1);
+    fragPosition_cameraSpace = (ModelViewMatrix * vec4(vertexPosition, 1)).xyz;
+    fragNormal_cameraSpace = NormalMatrix * vertexNormal;
+    UV = vertexUV;
 }
-

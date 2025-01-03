@@ -11,7 +11,7 @@ LIBS = -lGLEW -lglfw -lGL -lX11 -lXrandr -lXi -lXxf86vm -lXcursor -lXinerama
 TARGET = starwars
 
 # Source files
-SRC = main.cpp common/shader.cpp common/tiny_obj_loader.cc
+SRC = main.cpp common/shader.cpp common/tiny_obj_loader.cc common/texture.cpp
 
 # Default rule to build and execute the program, then clean up
 run: $(TARGET)
