@@ -24,8 +24,6 @@ using namespace glm;
 #include <common/shader.hpp>
 #include "common/texture.hpp"
 
-#define MAX_PROJETEIS 100
-
 //////////////////////////////////////////////////
 
 GLuint hangarTexture;
@@ -88,18 +86,19 @@ GLuint texture;
 bool estouVivo = true;
 
 // Hitboxes
-float falconRadius = 0.32f;
-float projectileRadius = 0.50f;
+float falconHitbox = 0.32f;
+float projeteisHitbox = 0.50f;
 
-struct Enemy
+//Estrutura inimigo
+struct Inimigo
 {
     glm::vec3 position;
     float radius;
-    bool isAlive;
-    float deathTime;
+    bool estaVivo;
+    float tempoMorto;
 };
 
-std::vector<Enemy> enemies;
+std::vector<Inimigo> enemies;
 
 /////////////////////////////////////////////////////////////////////////////////
 
@@ -318,28 +317,29 @@ void transferDataToGPUMemory(void)
 /////////////////////////////////////////////////////////
 
 // Projeteis
-struct Projectile
+struct Projetil
 {
     glm::vec3 position;
     glm::vec3 direction;
     float speed;
 };
-std::vector<Projectile> projectiles;
-// Criar um vetor separado para os projéteis do Falcon
-std::vector<Projectile> falconProjectiles;
-float projectileSpeed = 0.06f; // Speed of the projectiles
+std::vector<Projetil> projectiles;
 
-void shootProjectile(glm::vec3 startPosition)
+// Criar um vetor separado para os projéteis do Falcon
+std::vector<Projetil> falconProjectiles;
+float velocidadeProjetil = 0.06f;
+
+void dispararProjetil(glm::vec3 startPosition)
 {
-    Projectile p;
+    Projetil p;
     p.position = startPosition;
-    p.direction = glm::vec3(0.0f, 0.0f, 1.0f); // Shoots straight down in the z-direction
-    p.speed = projectileSpeed;
+    p.direction = glm::vec3(0.0f, 0.0f, 1.0f);
+    p.speed = velocidadeProjetil;
     projectiles.push_back(p);
 }
 
 // Colisão
-bool checkCollision(const glm::vec3 &object1Pos, float object1Radius,
+bool verificarColisao(const glm::vec3 &object1Pos, float object1Radius,
                     const glm::vec3 &object2Pos, float object2Radius)
 {
     float distance = glm::distance(object1Pos, object2Pos);
@@ -348,15 +348,15 @@ bool checkCollision(const glm::vec3 &object1Pos, float object1Radius,
 
 ///////////////////////////////////////////
 
-float lastFalconShotTime = 0.0f;
-float falconShotCooldown = 1.0f; // Tempo mínimo entre disparos (em segundos)
+float tempoUltimoDisparo = 0.0f;
+float tempoEntreDisparo = 1.0f; // Tempo mínimo entre disparos (em segundos)
 
 void shootFalconProjectile(const glm::vec3 &position)
 {
-    Projectile newProjectile;
+    Projetil newProjectile;
     newProjectile.position = position;
-    newProjectile.direction = glm::vec3(0.0f, 0.0f, 1.0f); // Direção positiva em Z
-    newProjectile.speed = -0.10f;                          // Velocidade do projétil
+    newProjectile.direction = glm::vec3(0.0f, 0.0f, 1.0f);
+    newProjectile.speed = -0.10f;               
     falconProjectiles.push_back(newProjectile);
 }
 
@@ -376,10 +376,10 @@ void controloNave(GLFWwindow *window, int key, int scancode, int action, int mod
         if (key == GLFW_KEY_SPACE)
         {
             float currentTime = glfwGetTime();
-            if (currentTime - lastFalconShotTime >= falconShotCooldown)
+            if (currentTime - tempoUltimoDisparo >= tempoEntreDisparo)
             {
                 shootFalconProjectile(glm::vec3(modelX, 0.0f, modelZ));
-                lastFalconShotTime = currentTime;
+                tempoUltimoDisparo = currentTime;
             }
         }
     }
@@ -392,9 +392,9 @@ void controloNave(GLFWwindow *window, int key, int scancode, int action, int mod
             estouVivo = true;
             for (auto &enemy : enemies)
             {
-                if (enemy.isAlive == false)
+                if (enemy.estaVivo == false)
                 {
-                    enemy.isAlive = true;
+                    enemy.estaVivo = true;
                 }
             }
             projectiles.clear();
@@ -478,29 +478,29 @@ int main(void)
     MatrixID = glGetUniformLocation(programID, "MVP");
 
     // Escala dos hangar
-    float hangarScale = 0.08f;
-    float hangarRotationAngle = 270.0f;
-    float falconScale = 0.40f;
+    float escalaHangar = 0.08f;
+    float rotacaoHangar = 270.0f;
+    float escalaFalcon = 0.40f;
 
     // Parametros naves
     int gridRows = 5;
     int gridCols = 5;
     float gridSpacing = 2.0f;
-    float enemyScale = 0.35f;
-    float enemyRotationAngle = 90.0f;
+    float escalaInimigos = 0.35f;
+    float rotacaoInimigo = 90.0f;
     float oscillationAmplitude = 2.0f;
     float oscillationSpeed = 0.5f;
     const float respawnTime = 10.0f;
 
-    // Inicializar inimigos na grade
+    // Inicializar inimigos em grade
     for (int row = 0; row < gridRows; ++row)
     {
         for (int col = 0; col < gridCols; ++col)
         {
-            Enemy enemy;
+            Inimigo enemy;
             enemy.position = glm::vec3(col * gridSpacing - 5, 0.0f, row * gridSpacing - 5);
             enemy.radius = 0.35f;
-            enemy.isAlive = true;
+            enemy.estaVivo = true;
             enemies.push_back(enemy);
         }
     }
@@ -538,38 +538,38 @@ int main(void)
         Projection = glm::perspective(glm::radians(90.0f), (float)WindowWidth / (float)WindowHeight, 0.1f, 100.0f);
         View = glm::lookAt(glm::vec3(3, 7, 16), glm::vec3(0, 0, 0), glm::vec3(0, 0.5, 0));
 
-        // First hangar
+        // Primeiro hangar
         drawModel(hangarVertexBuffer, hangarNormalBuffer, hangarColorBuffer, hangarUVBuffer, hangarTexture,
                   hangarVertices.size() / 3,
                   glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, 40.0f)) *
                       glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) *
-                      glm::scale(glm::mat4(1.0f), glm::vec3(hangarScale, hangarScale, hangarScale)));
+                      glm::scale(glm::mat4(1.0f), glm::vec3(escalaHangar, escalaHangar, escalaHangar)));
 
-        // Second hangar
+        // Segundo hangar
         drawModel(hangarVertexBuffer, hangarNormalBuffer, hangarColorBuffer, hangarUVBuffer, hangarTexture,
                   hangarVertices.size() / 3,
                   glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, -18.0f)) *
-                      glm::rotate(glm::mat4(1.0f), glm::radians(hangarRotationAngle), glm::vec3(0.0f, 1.0f, 0.0f)) *
-                      glm::scale(glm::mat4(1.0f), glm::vec3(hangarScale, hangarScale, hangarScale)));
+                      glm::rotate(glm::mat4(1.0f), glm::radians(rotacaoHangar), glm::vec3(0.0f, 1.0f, 0.0f)) *
+                      glm::scale(glm::mat4(1.0f), glm::vec3(escalaHangar, escalaHangar, escalaHangar)));
 
         // Desenhar nave
         if (estouVivo == true)
         {
             glm::mat4 falconModel = glm::translate(glm::mat4(1.0f), glm::vec3(modelX, 0.0f, modelZ));
             falconModel = glm::rotate(falconModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            falconModel = glm::scale(falconModel, glm::vec3(falconScale, falconScale, falconScale));
+            falconModel = glm::scale(falconModel, glm::vec3(escalaFalcon, escalaFalcon, escalaFalcon));
             drawModel(vertexbuffer, normalbuffer, colorbuffer, falconUVBuffer, falconTexture, vertices.size() / 3, falconModel);
         }
 
         // Desenhar e reviver naves inimigas
         for (size_t i = 0; i < enemies.size(); ++i)
         {
-            if (!enemies[i].isAlive)
+            if (!enemies[i].estaVivo)
             {
-                float timeSinceDeath = time - enemies[i].deathTime;
+                float timeSinceDeath = time - enemies[i].tempoMorto;
                 if (timeSinceDeath >= respawnTime)
                 {
-                    enemies[i].isAlive = true;
+                    enemies[i].estaVivo = true;
                 }
                 else
                 {
@@ -577,7 +577,7 @@ int main(void)
                 }
             }
 			
-			if(enemies[i].isAlive){
+			if(enemies[i].estaVivo){
             // Calcular a oscilação para o movimento dinâmico
             float oscillation = oscillationAmplitude * sin(time * oscillationSpeed);
             glm::vec3 dynamicPosition = enemies[i].position;
@@ -585,8 +585,8 @@ int main(void)
 
             // Aplicar transformações no modelo
             glm::mat4 enemyModel = glm::translate(glm::mat4(1.0f), dynamicPosition) *
-                                   glm::rotate(glm::mat4(1.0f), glm::radians(enemyRotationAngle), glm::vec3(0.0f, 1.0f, 0.0f)) *
-                                   glm::scale(glm::mat4(1.0f), glm::vec3(enemyScale, enemyScale, enemyScale));
+                                   glm::rotate(glm::mat4(1.0f), glm::radians(rotacaoInimigo), glm::vec3(0.0f, 1.0f, 0.0f)) *
+                                   glm::scale(glm::mat4(1.0f), glm::vec3(escalaInimigos, escalaInimigos, escalaInimigos));
 
             drawModel(enemyVertexBuffer, enemyNormalBuffer, enemyColorBuffer, enemyShipUVBuffer, enemyShipTexture, enemyVertices.size() / 3, enemyModel);
 		}
@@ -594,6 +594,7 @@ int main(void)
         }
 
         /////////////////////////////////////////////////////
+
         // Projeteis
         static float lastShootTime = 0.0f;
         float shootInterval = 3.0f;
@@ -602,16 +603,15 @@ int main(void)
         {
             lastShootTime = time;
 
-            // Iterar por todas as colunas na grade
             for (int col = 0; col < gridCols; ++col)
             {
                 // Procurar a primeira nave viva de baixo para cima em cada coluna
                 for (int row = gridRows - 1; row >= 0; --row)
                 {
-                    // Calcular o índice correspondente no vetor unidimensional
+                    // Calcular o índice correspondente
                     int index = row * gridCols + col;
 
-                    if (enemies[index].isAlive)
+                    if (enemies[index].estaVivo)
                     {
                         // Obter a posição dinâmica do inimigo
                         float oscillation = oscillationAmplitude * sin(time * oscillationSpeed);
@@ -620,9 +620,8 @@ int main(void)
                         // Adicionar oscilação à posição horizontal
                         shipPosition.x += oscillation;
 
-                        // Disparar o projétil do inimigo encontrado
-                        shootProjectile(shipPosition);
-                        break; // Sair do loop interno, pois encontramos a nave que deve disparar
+                        dispararProjetil(shipPosition);
+                        break; 
                     }
                 }
             }
@@ -658,13 +657,13 @@ int main(void)
 
         // Apagar projeteis fora
         projectiles.erase(std::remove_if(projectiles.begin(), projectiles.end(),
-                                         [](const Projectile &p)
-                                         { return p.position.z < -50.0f; }), // Assume -50.0f is out of bounds
+                                         [](const Projetil &p)
+                                         { return p.position.z < -100.0f; }),
                           projectiles.end());
 
         falconProjectiles.erase(
-            std::remove_if(falconProjectiles.begin(), falconProjectiles.end(), [](const Projectile &proj)
-                           { return proj.position.z > 50.0f || proj.position.z < -50.0f; }),
+            std::remove_if(falconProjectiles.begin(), falconProjectiles.end(), [](const Projetil &proj)
+                           { return proj.position.z > 100.0f || proj.position.z < -100.0f; }),
             falconProjectiles.end());
 
         // Posição atual da nave Falcon
@@ -679,7 +678,8 @@ int main(void)
         {
             for (auto it = projectiles.begin(); it != projectiles.end();)
             {
-                if (checkCollision(collisionCenter, falconRadius, it->position, projectileRadius))
+                if (verificarColisao(collisionCenter, falconHitbox
+            , it->position, projeteisHitbox))
                 {
                     // Remove o projétil da lista após a colisão
                     it = projectiles.erase(it);
@@ -695,7 +695,7 @@ int main(void)
 
         for (auto &enemy : enemies)
         {
-            if (enemy.isAlive)
+            if (enemy.estaVivo)
             {
                 // Calcular a posição dinâmica com oscilação
                 float oscillation = oscillationAmplitude * sin(time * oscillationSpeed);
@@ -708,9 +708,9 @@ int main(void)
                 // Verificar colisão com projéteis do Falcon
                 for (auto &proj : falconProjectiles)
                 {
-                    if (checkCollision(proj.position, projectileRadius, adjustedEnemyPosition, enemy.radius))
+                    if (verificarColisao(proj.position, projeteisHitbox, adjustedEnemyPosition, enemy.radius))
                     {
-                        enemy.isAlive = false;     // Marca como destruído
+                        enemy.estaVivo = false;     // Marca como destruído
                         proj.position.z = 1000.0f; // Remove o projétil
                     }
                 }
