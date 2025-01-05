@@ -564,7 +564,7 @@ int main(void)
         // Desenhar e reviver naves inimigas
         for (size_t i = 0; i < enemies.size(); ++i)
         {
-            if (!enemies[i].estaVivo)
+            if (enemies[i].estaVivo == false)
             {
                 float timeSinceDeath = time - enemies[i].tempoMorto;
                 if (timeSinceDeath >= respawnTime)
@@ -577,14 +577,14 @@ int main(void)
                 }
             }
 			
-			if(enemies[i].estaVivo){
-            // Calcular a oscilação para o movimento dinâmico
-            float oscillation = oscillationAmplitude * sin(time * oscillationSpeed);
-            glm::vec3 dynamicPosition = enemies[i].position;
-            dynamicPosition.x += oscillation; // Oscilação horizontal
+			if(enemies[i].estaVivo == true){
+				// Calcular a oscilação para o movimento dinâmico
+				float oscillation = oscillationAmplitude * sin(time * oscillationSpeed);
+				glm::vec3 dynamicPosition = enemies[i].position;
+				dynamicPosition.x += oscillation; // Oscilação horizontal
 
-            // Aplicar transformações no modelo
-            glm::mat4 enemyModel = glm::translate(glm::mat4(1.0f), dynamicPosition) *
+				// Aplicar transformações no modelo
+				glm::mat4 enemyModel = glm::translate(glm::mat4(1.0f), dynamicPosition) *
                                    glm::rotate(glm::mat4(1.0f), glm::radians(rotacaoInimigo), glm::vec3(0.0f, 1.0f, 0.0f)) *
                                    glm::scale(glm::mat4(1.0f), glm::vec3(escalaInimigos, escalaInimigos, escalaInimigos));
 
@@ -711,6 +711,7 @@ int main(void)
                     if (verificarColisao(proj.position, projeteisHitbox, adjustedEnemyPosition, enemy.radius))
                     {
                         enemy.estaVivo = false;     // Marca como destruído
+                        enemy.tempoMorto = time;
                         proj.position.z = 1000.0f; // Remove o projétil
                     }
                 }
